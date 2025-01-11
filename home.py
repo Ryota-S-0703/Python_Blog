@@ -3,6 +3,7 @@ import pandas as pd
 import sqlite3
 
 st.write("Hello world")
+st.write("test")
 
 # データベース接続とテーブル作成
 def init_db():
