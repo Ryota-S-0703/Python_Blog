@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 
+from database import init_db, insert_data, get_data, update_data
+
 st.write("Hello world")
 st.write("test")
 
@@ -43,3 +45,46 @@ def update_data(user_id, name, age):
     c.execute("UPDATE users SET name = ?, age = ? WHERE id = ?", (name, age, user_id))
     conn.commit()
     conn.close()
+
+
+# 初期化
+init_db()
+
+# タイトル
+st.title("SQLite Database Example with Streamlit")
+
+# メニュー選択
+menu = st.sidebar.selectbox("Menu", ["View Data", "Add Data", "Update Data"])
+
+# データ表示
+if menu == "View Data":
+    st.subheader("View Data")
+    data = get_data()
+    if data:
+        for row in data:
+            st.write(f"ID: {row[0]}, Name: {row[1]}, Age: {row[2]}")
+    else:
+        st.write("No data available.")
+
+# データ追加
+elif menu == "Add Data":
+    st.subheader("Add Data")
+    name = st.text_input("Name")
+    age = st.number_input("Age", min_value=1, step=1)
+    if st.button("Add"):
+        insert_data(name, age)
+        st.success(f"Data added: {name}, {age}")
+
+# データ更新
+elif menu == "Update Data":
+    st.subheader("Update Data")
+    data = get_data()
+    if data:
+        user_id = st.selectbox("Select User ID", [row[0] for row in data])
+        name = st.text_input("New Name")
+        age = st.number_input("New Age", min_value=1, step=1)
+        if st.button("Update"):
+            update_data(user_id, name, age)
+            st.success(f"Data updated for ID {user_id}: {name}, {age}")
+    else:
+        st.write("No data available to update.")
