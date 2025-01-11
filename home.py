@@ -38,13 +38,15 @@ def add_data_to_db(date, core, peripheral, indoor, stretch, running, home):
 # データを取得
 df = get_data_from_db()
 
+# NGや0の部分に赤色をつけるための関数
+def highlight_ng(val):
+    color = 'background-color: red' if val == "NG" or val == 0 else ''
+    return color
+
 # レイアウト: 表の表示エリア
 st.subheader("📋 トレーニングデータ一覧")
-st.dataframe(
-    df,
-    width=800,  # 横幅の指定
-    height=300  # 表の高さを調整
-)
+styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+st.dataframe(styled_df, width=800, height=300)
 
 st.markdown("---")  # セクション分け用ライン
 
@@ -78,7 +80,8 @@ if submit_button:
     st.success("✅ データベースに新しいデータを追加しました！")
     # 最新データを再取得して表示
     df = get_data_from_db()
-    st.dataframe(df)
+    styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+    st.dataframe(styled_df)
 
 st.markdown("---")  # セクション分け用ライン
 
