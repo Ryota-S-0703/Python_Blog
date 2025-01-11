@@ -34,7 +34,7 @@ core_training = st.checkbox("体幹トレーニング")
 peripheral_vision = st.checkbox("周辺視野トレーニング")
 indoor_handling = st.checkbox("室内ハンドリング")
 stretching = st.checkbox("ストレッチ")
-running = st.checkbox("ランニング")
+running_distance = st.number_input("ランニング距離（km）", min_value=0.0, step=0.1, value=0.0)
 home_training = st.checkbox("自宅(20時まで家にいたか)")
 
 # データを更新
