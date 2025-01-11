@@ -36,3 +36,6 @@ indoor_handling = st.checkbox("室内ハンドリング")
 stretching = st.checkbox("ストレッチ")
 running = st.checkbox("ランニング")
 home_training = st.checkbox("自宅(20時まで家にいたか)")
+
+# データを更新
+st.button(label='データを更新する')
