@@ -23,15 +23,63 @@ def get_data_from_db():
     conn.close()
     return df
 
-# データベースに新しいデータを追加する関数
-def add_data_to_db(date, core, peripheral, indoor, stretch, running, home):
+# 指定した日付のデフォルト値を取得する関数
+def get_defaults_for_date(date):
     conn = sqlite3.connect("training_data.db")
     cursor = conn.cursor()
-    query = """
-    INSERT INTO training (date, core_training, peripheral_vision, indoor_handling, stretching, running, home_training)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-    """
-    cursor.execute(query, (date, core, peripheral, indoor, stretch, running, home))
+    cursor.execute("SELECT * FROM training WHERE date = ?", (date,))
+    existing_data = cursor.fetchone()
+    conn.close()
+    
+    if existing_data:
+        _, core, peripheral, indoor, stretch, running, home = existing_data
+        defaults = {
+            "core_training": True if core == "OK" else False,
+            "peripheral_vision": True if peripheral == "OK" else False,
+            "indoor_handling": True if indoor == "OK" else False,
+            "stretching": True if stretch == "OK" else False,
+            "running_distance": running,
+            "home_training": True if home == "OK" else False,
+        }
+    else:
+        # データが存在しない場合のデフォルト値
+        defaults = {
+            "core_training": False,
+            "peripheral_vision": False,
+            "indoor_handling": False,
+            "stretching": False,
+            "running_distance": 0.0,
+            "home_training": False,
+        }
+    return defaults
+
+
+# データベースにデータを更新・追加する関数
+def update_or_add_data(date, core, peripheral, indoor, stretch, running, home):
+    conn = sqlite3.connect("training_data.db")
+    cursor = conn.cursor()
+    
+    # 既存の日付を検索
+    cursor.execute("SELECT * FROM training WHERE date = ?", (date,))
+    existing_data = cursor.fetchone()
+    
+    if existing_data:
+        # データが存在する場合、更新
+        query = """
+        UPDATE training
+        SET core_training = ?, peripheral_vision = ?, indoor_handling = ?, 
+            stretching = ?, running = ?, home_training = ?
+        WHERE date = ?
+        """
+        cursor.execute(query, (core, peripheral, indoor, stretch, running, home, date))
+    else:
+        # データが存在しない場合、新規追加
+        query = """
+        INSERT INTO training (date, core_training, peripheral_vision, indoor_handling, stretching, running, home_training)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
+        cursor.execute(query, (date, core, peripheral, indoor, stretch, running, home))
+    
     conn.commit()
     conn.close()
 
@@ -51,7 +99,7 @@ st.dataframe(styled_df, width=800, height=300)
 st.markdown("---")  # セクション分け用ライン
 
 # レイアウト: 入力フォーム
-st.subheader("📝 新しいデータの追加")
+st.subheader("📝 新しいデータの追加または更新")
 with st.form(key="training_form"):
     # データ入力
     min_date = datetime.date(1900, 1, 1)
@@ -76,8 +124,8 @@ with st.form(key="training_form"):
 
 # データベース更新とフィードバック
 if submit_button:
-    add_data_to_db(d, core_training, peripheral_vision, indoor_handling, stretching, running_distance, home_training)
-    st.success("✅ データベースに新しいデータを追加しました！")
+    update_or_add_data(d, core_training, peripheral_vision, indoor_handling, stretching, running_distance, home_training)
+    st.success("✅ データベースを更新しました！")
     # 最新データを再取得して表示
     df = get_data_from_db()
     styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
