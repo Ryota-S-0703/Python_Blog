@@ -84,14 +84,26 @@ def update_or_add_data(date, core, peripheral, indoor, stretch, running, home):
 # データを取得
 df = get_data_from_db()
 
-# NGや0の部分に赤色をつけるための関数
-def highlight_ng(val):
-    color = 'background-color: red' if val == "NG" or val == 0 else ''
-    return color
+# running列を数値型に変換して小数点以下1桁に丸める
+df['running'] = pd.to_numeric(df['running'], errors='coerce').round(1)
 
-# レイアウト: 表の表示エリア
+# NGや0.0の部分に赤色をつけるための関数
+def highlight_ng(val):
+    # 型に応じて条件を分岐
+    if isinstance(val, (int, float)) and val == 0.0:
+        return 'background-color: red'  # 距離が0.0の場合
+    elif isinstance(val, str) and val == "NG":
+        return 'background-color: red'  # "NG"の場合
+    else:
+        return ''  # 条件に合わない場合はスタイルなし
+
+# データフレームのスタイルを設定
+styled_df = df.style \
+    .format({'running': '{:.1f}'}) \
+    .applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+
+# データフレームを表示
 st.subheader("📋 トレーニングデータ一覧")
-styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
 st.dataframe(styled_df, width=800, height=300)
 
 st.markdown("---")  # セクション分け用ライン
@@ -134,7 +146,13 @@ if submit_button:
     st.success("✅ データベースを更新しました！")
     # 最新データを再取得して表示
     df = get_data_from_db()
-    styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+    # running列を数値型に変換して小数点以下1桁に丸める
+    df['running'] = pd.to_numeric(df['running'], errors='coerce').round(1)
+    # データフレームのスタイルを設定
+    styled_df = df.style \
+    .format({'running': '{:.1f}'}) \
+    .applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+
     st.dataframe(styled_df)
 else:
     st.write("送信ボタンがまだ押されていません。")
