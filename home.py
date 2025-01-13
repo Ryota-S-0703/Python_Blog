@@ -38,11 +38,10 @@ def get_defaults_for_date(date):
             "peripheral_vision": True if peripheral == "OK" else False,
             "indoor_handling": True if indoor == "OK" else False,
             "stretching": True if stretch == "OK" else False,
-            "running_distance": running,
+            "running_distance": float(running) if running else 0.0,  # 型変換を追加
             "home_training": True if home == "OK" else False,
         }
     else:
-        # データが存在しない場合のデフォルト値
         defaults = {
             "core_training": False,
             "peripheral_vision": False,
@@ -52,7 +51,6 @@ def get_defaults_for_date(date):
             "home_training": False,
         }
     return defaults
-
 
 # データベースにデータを更新・追加する関数
 def update_or_add_data(date, core, peripheral, indoor, stretch, running, home):
@@ -106,18 +104,26 @@ with st.form(key="training_form"):
     max_date = datetime.date(2100, 12, 31)
     default_date = datetime.date.today()
     d = st.date_input('トレーニング実施日', default_date, min_value=min_date, max_value=max_date)
+    
+    # 日付に基づいてデフォルト値を取得
+    defaults = get_defaults_for_date(d)
 
-    # チェックボックスの作成（デフォルトはオフ）
+    # チェックボックスの作成（デフォルト値を使用）
     col1, col2, col3 = st.columns(3)
     with col1:
-        core_training = "OK" if st.checkbox("体幹トレーニング") else "NG"
-        indoor_handling = "OK" if st.checkbox("室内ハンドリング") else "NG"
+        core_training = "OK" if st.checkbox("体幹トレーニング", value=defaults["core_training"]) else "NG"
+        indoor_handling = "OK" if st.checkbox("室内ハンドリング", value=defaults["indoor_handling"]) else "NG"
     with col2:
-        peripheral_vision = "OK" if st.checkbox("周辺視野トレーニング") else "NG"
-        stretching = "OK" if st.checkbox("ストレッチ") else "NG"
+        peripheral_vision = "OK" if st.checkbox("周辺視野トレーニング", value=defaults["peripheral_vision"]) else "NG"
+        stretching = "OK" if st.checkbox("ストレッチ", value=defaults["stretching"]) else "NG"
     with col3:
-        running_distance = st.number_input("ランニング距離（km）", min_value=0.0, step=0.1, value=0.0)
-        home_training = "OK" if st.checkbox("自宅(20時まで家にいたか)") else "NG"
+        running_distance = st.number_input(
+        "ランニング距離（km）",
+        min_value=0.0,
+        step=0.1,
+        value=float(defaults["running_distance"])  # 型変換を追加
+        )
+        home_training = "OK" if st.checkbox("自宅(20時まで家にいたか)", value=defaults["home_training"]) else "NG"
 
     # 送信ボタン
     submit_button = st.form_submit_button(label="💾 データを更新する")
@@ -130,7 +136,9 @@ if submit_button:
     df = get_data_from_db()
     styled_df = df.style.applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
     st.dataframe(styled_df)
-
+else:
+    st.write("送信ボタンがまだ押されていません。")
+    
 st.markdown("---")  # セクション分け用ライン
 
 # フッター

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS training (
     peripheral_vision TEXT,
     indoor_handling TEXT,
     stretching TEXT,
-    running TEXT,
+    running REAL,
     home_training TEXT
 )
 """)
