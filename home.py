@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import datetime
+import matplotlib.pyplot as plt  # これを追加
 
 # タイトルを表示
 st.title("🏋️ トレーニングデータ管理")
@@ -81,11 +82,82 @@ def update_or_add_data(date, core, peripheral, indoor, stretch, running, home):
     conn.commit()
     conn.close()
 
+# 今日のデータを取得する関数
+def get_today_data(df):
+    today = datetime.date.today()
+    df['date'] = pd.to_datetime(df['date']).dt.date
+    return df[df['date'] == today]
+
+# 円グラフを描画する関数
+def draw_pie_chart(achieved, total):
+    fig, ax = plt.subplots()
+    labels = ['Not Achieved', 'Achieved']  # 順番を変更
+    sizes = [total - achieved, achieved]  # 順番を変更
+    colors = ['#f44336', '#4caf50']  # 赤と緑
+    explode = (0, 0.1)  # 達成部分を強調
+
+    ax.pie(
+        sizes,
+        explode=explode,
+        labels=labels,
+        autopct='%1.1f%%',
+        startangle=90,
+        colors=colors
+    )
+    ax.axis('equal')  # 円を正確な円形に
+    return fig
+
+
 # データを取得
 df = get_data_from_db()
 
+# 今日のデータを抽出
+today_data = get_today_data(df)
+
+# 今日の進捗度を計算
+if not today_data.empty:
+    # 判定用列
+    check_columns = ['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training']
+
+    # 今日の最初のデータを基に計算
+    row = today_data.iloc[0]
+    achieved_count = sum(
+        1 for col in check_columns 
+        if row[col] == 'OK' or (col == 'running' and pd.to_numeric(row[col], errors='coerce') > 0.0)
+    )
+    total_count = len(check_columns)
+
+    # 円グラフを描画
+    st.subheader("🎯 今日のトレーニング進捗")
+    fig = draw_pie_chart(achieved_count, total_count)
+    st.pyplot(fig)
+
+    # テキストで進捗率を表示
+    st.write(f"今日の進捗: {achieved_count} / {total_count} 項目達成")
+else:
+    st.write("今日のデータはまだありません。")
+
+# 日付列でソート（最新順）
+df['date'] = pd.to_datetime(df['date'])  # 日付列をdatetime型に変換
+df = df.sort_values(by='date', ascending=False)  # 最新順に並べ替え
+
 # running列を数値型に変換して小数点以下1桁に丸める
 df['running'] = pd.to_numeric(df['running'], errors='coerce').round(1)
+
+# 日付列を "YYYY-MM-DD" の形式に変換
+df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+
+# 列名を日本語にマッピング
+columns_mapping = {
+    'date': '日付',
+    'core_training': '体幹',
+    'peripheral_vision': '周辺視野',
+    'indoor_handling': 'ハンドリング',
+    'stretching': 'ストレッチ',
+    'running': 'ランニング距離 (km)',
+    'home_training': '20時までに自宅'
+}
+df.rename(columns=columns_mapping, inplace=True)
 
 # NGや0.0の部分に赤色をつけるための関数
 def highlight_ng(val):
@@ -97,10 +169,10 @@ def highlight_ng(val):
     else:
         return ''  # 条件に合わない場合はスタイルなし
 
-# データフレームのスタイルを設定
+# NGや0.0の部分に赤色をつけるためのスタイル適用
 styled_df = df.style \
-    .format({'running': '{:.1f}'}) \
-    .applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+    .format({'ランニング距離 (km)': '{:.1f}'}) \
+    .applymap(highlight_ng, subset=list(columns_mapping.values())[1:])  # マッピング後の列名で適用
 
 # データフレームを表示
 st.subheader("📋 トレーニングデータ一覧")
@@ -146,12 +218,33 @@ if submit_button:
     st.success("✅ データベースを更新しました！")
     # 最新データを再取得して表示
     df = get_data_from_db()
+
+    # 日付列でソート（最新順）
+    df['date'] = pd.to_datetime(df['date'])  # 日付列をdatetime型に変換
+    df = df.sort_values(by='date', ascending=False)  # 最新順に並べ替え
+
     # running列を数値型に変換して小数点以下1桁に丸める
     df['running'] = pd.to_numeric(df['running'], errors='coerce').round(1)
-    # データフレームのスタイルを設定
+
+    # 日付列を "YYYY-MM-DD" の形式に変換
+    df['date'] = df['date'].dt.strftime('%Y-%m-%d')
+
+    # 列名を日本語にマッピング
+    columns_mapping = {
+        'date': '日付',
+        'core_training': '体幹',
+        'peripheral_vision': '周辺視野',
+        'indoor_handling': 'ハンドリング',
+        'stretching': 'ストレッチ',
+        'running': 'ランニング距離 (km)',
+        'home_training': '20時までに自宅'
+    }
+    df.rename(columns=columns_mapping, inplace=True)
+
+    # NGや0.0の部分に赤色をつけるためのスタイル適用
     styled_df = df.style \
-    .format({'running': '{:.1f}'}) \
-    .applymap(highlight_ng, subset=['core_training', 'peripheral_vision', 'indoor_handling', 'stretching', 'running', 'home_training'])
+        .format({'ランニング距離 (km)': '{:.1f}'}) \
+        .applymap(highlight_ng, subset=list(columns_mapping.values())[1:])  # マッピング後の列名で適用
 
     st.dataframe(styled_df)
 else:
