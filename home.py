@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import sqlite3
 import datetime
-import matplotlib.pyplot as plt  # これを追加
 
 # タイトルを表示
 st.title("🏋️ トレーニングデータ管理")
@@ -88,26 +87,6 @@ def get_today_data(df):
     df['date'] = pd.to_datetime(df['date']).dt.date
     return df[df['date'] == today]
 
-# 円グラフを描画する関数
-def draw_pie_chart(achieved, total):
-    fig, ax = plt.subplots()
-    labels = ['Not Achieved', 'Achieved']  # 順番を変更
-    sizes = [total - achieved, achieved]  # 順番を変更
-    colors = ['#f44336', '#4caf50']  # 赤と緑
-    explode = (0, 0.1)  # 達成部分を強調
-
-    ax.pie(
-        sizes,
-        explode=explode,
-        labels=labels,
-        autopct='%1.1f%%',
-        startangle=90,
-        colors=colors
-    )
-    ax.axis('equal')  # 円を正確な円形に
-    return fig
-
-
 # データを取得
 df = get_data_from_db()
 
@@ -127,13 +106,10 @@ if not today_data.empty:
     )
     total_count = len(check_columns)
 
-    # 円グラフを描画
+    # 進捗率を大きく表示
     st.subheader("🎯 今日のトレーニング進捗")
-    fig = draw_pie_chart(achieved_count, total_count)
-    st.pyplot(fig)
-
-    # テキストで進捗率を表示
-    st.write(f"今日の進捗: {achieved_count} / {total_count} 項目達成")
+    progress_percentage = (achieved_count / total_count) * 100
+    st.metric(label="進捗率", value=f"{achieved_count} / {total_count} 項目達成", delta=f"{progress_percentage:.1f}%")
 else:
     st.write("今日のデータはまだありません。")
 
