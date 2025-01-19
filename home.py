@@ -24,22 +24,26 @@ def get_data_from_db():
     return df
 
 # 指定した日付のデフォルト値を取得する関数
+# コメント列を含むデフォルト値取得関数を更新
 def get_defaults_for_date(date):
     conn = sqlite3.connect("training_data.db")
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM training WHERE date = ?", (date,))
+
+    # 必要な列だけを取得
+    cursor.execute("SELECT date, core_training, peripheral_vision, indoor_handling, stretching, running, home_training, comment FROM training WHERE date = ?", (date,))
     existing_data = cursor.fetchone()
     conn.close()
-    
+
     if existing_data:
-        _, core, peripheral, indoor, stretch, running, home = existing_data
+        _, core, peripheral, indoor, stretch, running, home, comment = existing_data
         defaults = {
             "core_training": True if core == "OK" else False,
             "peripheral_vision": True if peripheral == "OK" else False,
             "indoor_handling": True if indoor == "OK" else False,
             "stretching": True if stretch == "OK" else False,
-            "running_distance": float(running) if running else 0.0,  # 型変換を追加
+            "running_distance": float(running) if running else 0.0,
             "home_training": True if home == "OK" else False,
+            "comment": comment if comment else "",
         }
     else:
         defaults = {
@@ -49,37 +53,41 @@ def get_defaults_for_date(date):
             "stretching": False,
             "running_distance": 0.0,
             "home_training": False,
+            "comment": "",
         }
     return defaults
 
+
+
 # データベースにデータを更新・追加する関数
-def update_or_add_data(date, core, peripheral, indoor, stretch, running, home):
+def update_or_add_data(date, core, peripheral, indoor, stretch, running, home, comment=None):
     conn = sqlite3.connect("training_data.db")
     cursor = conn.cursor()
-    
+
     # 既存の日付を検索
     cursor.execute("SELECT * FROM training WHERE date = ?", (date,))
     existing_data = cursor.fetchone()
-    
+
     if existing_data:
         # データが存在する場合、更新
         query = """
         UPDATE training
         SET core_training = ?, peripheral_vision = ?, indoor_handling = ?, 
-            stretching = ?, running = ?, home_training = ?
+            stretching = ?, running = ?, home_training = ?, comment = ?
         WHERE date = ?
         """
-        cursor.execute(query, (core, peripheral, indoor, stretch, running, home, date))
+        cursor.execute(query, (core, peripheral, indoor, stretch, running, home, comment, date))
     else:
         # データが存在しない場合、新規追加
         query = """
-        INSERT INTO training (date, core_training, peripheral_vision, indoor_handling, stretching, running, home_training)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO training (date, core_training, peripheral_vision, indoor_handling, stretching, running, home_training, comment)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
-        cursor.execute(query, (date, core, peripheral, indoor, stretch, running, home))
-    
+        cursor.execute(query, (date, core, peripheral, indoor, stretch, running, home, comment))
+
     conn.commit()
     conn.close()
+
 
 # 今日のデータを取得する関数
 def get_today_data(df):
@@ -178,19 +186,23 @@ with st.form(key="training_form"):
         stretching = "OK" if st.checkbox("ストレッチ", value=defaults["stretching"]) else "NG"
     with col3:
         running_distance = st.number_input(
-        "ランニング距離（km）",
-        min_value=0.0,
-        step=0.1,
-        value=float(defaults["running_distance"])  # 型変換を追加
+            "ランニング距離（km）",
+            min_value=0.0,
+            step=0.1,
+            value=float(defaults["running_distance"])  # 型変換を追加
         )
         home_training = "OK" if st.checkbox("自宅(20時まで家にいたか)", value=defaults["home_training"]) else "NG"
+
+    # コメントの入力欄を追加
+    comment = st.text_area("コメント", value=defaults["comment"], height=100)
 
     # 送信ボタン
     submit_button = st.form_submit_button(label="💾 データを更新する")
 
+
 # データベース更新とフィードバック
 if submit_button:
-    update_or_add_data(d, core_training, peripheral_vision, indoor_handling, stretching, running_distance, home_training)
+    update_or_add_data(d, core_training, peripheral_vision, indoor_handling, stretching, running_distance, home_training, comment)
     st.success("✅ データベースを更新しました！")
     # 最新データを再取得して表示
     df = get_data_from_db()
