@@ -6,6 +6,17 @@ import datetime
 # タイトルを表示
 st.title("🏋️ トレーニングデータ管理")
 
+# カスタムCSSを使ってセクション分けラインの色を変更
+st.markdown("""
+    <style>
+        hr {
+            border: 0;
+            border-top: 3px solid #FF6347;  /* 色を変更 */
+            margin: 20px 0;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # データベースからデータを取得する関数
 def get_data_from_db():
     conn = sqlite3.connect("training_data.db")
@@ -153,7 +164,8 @@ styled_df = df.style \
 st.subheader("📋 トレーニングデータ一覧")
 st.dataframe(styled_df, width=800, height=300)
 
-st.markdown("---")  # セクション分け用ライン
+# セクション分けライン
+st.markdown('<hr style="border-top: 3px solid #FF6347;">', unsafe_allow_html=True)  # 色を指定
 
 # レイアウト: 入力フォーム
 st.subheader("📝 新しいデータの追加または更新")
@@ -229,7 +241,8 @@ if submit_button:
 else:
     st.write("送信ボタンがまだ押されていません。")
     
-st.markdown("---")  # セクション分け用ライン
+# セクション分けライン
+st.markdown('<hr style="border-top: 3px solid #FF6347;">', unsafe_allow_html=True)  # 色を指定
 
 # フッター
 st.write("🔗 [Streamlit公式ドキュメント](https://docs.streamlit.io/)を参考にカスタマイズしてください。")

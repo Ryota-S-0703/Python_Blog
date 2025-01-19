@@ -5,6 +5,17 @@ import sqlite3
 # タイトルを表示
 st.title("🏋️‍♀️ トレーニングブログ")
 
+# カスタムCSSを使ってセクション分けラインの色を変更
+st.markdown("""
+    <style>
+        hr {
+            border: 0;
+            border-top: 3px solid #FF6347;  /* 色を変更 */
+            margin: 20px 0;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 # データベースからデータを取得する関数
 def get_data_from_db():
     conn = sqlite3.connect("training_data.db")
@@ -35,7 +46,7 @@ filtered_df['date'] = filtered_df['date'].dt.strftime('%Y-%m-%d')
 # トレーニング内容とコメントの表示
 if not filtered_df.empty:
     # トレーニング内容（コメントなし）
-    st.subheader(f"日付: {formatted_date}")
+    st.subheader(f"{formatted_date}")
     st.write("**トレーニング内容**")
     
     # コメントはテーブルに含まない
@@ -49,7 +60,7 @@ else:
     st.write("選択した日付のデータはありません。")
 
 # セクション分けライン
-st.markdown("---")  # これ以降にすべてのトレーニング内容とコメントを表示
+st.markdown('<hr style="border-top: 3px solid #FF6347;">', unsafe_allow_html=True)  # 色を指定
 
 # すべてのデータを新しい順に表示
 st.subheader("すべてのトレーニング内容とコメント")
@@ -60,8 +71,7 @@ for date in df['date'].dt.strftime('%Y-%m-%d').unique():
     day_data = df[df['date'].dt.strftime('%Y-%m-%d') == date]
     
     # トレーニング内容（コメントなし）
-    st.subheader(f"日付: {date}")
-    st.write("**トレーニング内容**")
+    st.subheader(f"{date}")
     training_data = day_data.drop(columns=['date', 'comment'])
     st.table(training_data)
     
