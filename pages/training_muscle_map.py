@@ -1,9 +1,6 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
 
 # SQLiteデータベースファイル
 db_file_path = "muscle_data.db"
@@ -17,23 +14,70 @@ def fetch_data():
     conn.close()
     return df
 
-# データをヒートマップ用に整形する関数
-def prepare_heatmap_data(df):
-    # 日付列をdatetime型に変換
+# 表データを作成する関数
+def prepare_table_data(df):
+    # 日付列をdatetime型に変換し、時間部分を除去
     df['日付'] = pd.to_datetime(df['日付']).dt.date
     df = df.sort_values(by='日付', ascending=False)  # 新しい順にソート
+
+    # 種目ごとのセル内容を作成
+    df['セル内容'] = df[['重量', '回数', 'セット数']].astype(str).agg('-'.join, axis=1)
 
     # ピボットテーブル作成
     pivot_table = df.pivot_table(
         index='日付',
         columns='種目',
-        values='換算値',
-        aggfunc=np.sum
+        values='セル内容',
+        aggfunc=lambda x: ' / '.join(x)  # 同じ種目が1日に複数回ある場合、区切る
     )
 
-    # 各種目ごとに標準化（0~1スケール）
-    normalized = pivot_table.apply(lambda x: (x - x.min()) / (x.max() - x.min()), axis=0)
-    return normalized.fillna(0)  # NaNを0で埋める
+    return pivot_table.fillna('')  # NaNを空文字列に変換
+
+# 縦書きHTMLテーブル作成関数
+def generate_vertical_html_table(table_data):
+    html = """
+    <style>
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: center;
+            vertical-align: bottom; /* 下揃え */
+        }
+        th {
+            writing-mode: vertical-rl;
+        }
+        td {
+            background-color: lightgreen;
+        }
+        td:empty {
+            background-color: white;
+        }
+        td:first-child {
+            background-color: white; /* 日付セルを緑にしない */
+        }
+    </style>
+    <table>
+        <thead>
+            <tr>
+                <th>日付</th>
+    """
+    # ヘッダー部分
+    for col in table_data.columns:
+        html += f"<th>{col}</th>"
+    html += "</tr></thead><tbody>"
+
+    # データ部分（新しい日付順）
+    for idx, row in table_data.iterrows():
+        html += f"<tr><td>{idx}</td>"
+        for cell in row:
+            html += f"<td>{cell}</td>" if cell else "<td></td>"
+        html += "</tr>"
+    html += "</tbody></table>"
+    return html
 
 # StreamlitのUI
 st.title("筋トレデータの管理")
@@ -44,33 +88,14 @@ df = fetch_data()
 if df.empty:
     st.write("データがありません。筋トレデータを入力してください。")
 else:
-    # ヒートマップ用データ準備
-    heatmap_data = prepare_heatmap_data(df)
+    # 表データ準備
+    table_data = prepare_table_data(df)
 
-    # ヒートマップの描画
-    st.subheader("種目別負荷ヒートマップ")
+    # HTMLテーブル生成
+    html_table = generate_vertical_html_table(table_data)
 
-    # 図の設定
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(
-        heatmap_data,
-        cmap="Reds",
-        linewidths=0.5,
-        linecolor="gray",
-        cbar_kws={'label': '負荷（正規化）'},
-        xticklabels=True,
-        yticklabels=True
-    )
-
-    # 横軸ラベルを縦書きに
-    plt.xticks(rotation=90, fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.xlabel("種目", fontsize=12)
-    plt.ylabel("日付", fontsize=12)
-    plt.title("筋トレ種目別負荷ヒートマップ", fontsize=14)
-
-    # Streamlitに表示
-    st.pyplot(plt)
+    # 表を表示
+    st.markdown(html_table, unsafe_allow_html=True)
 
 # 他のセクションやフォームはそのまま維持
 st.subheader("過去の筋トレ履歴")
