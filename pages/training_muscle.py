@@ -109,37 +109,42 @@ today_data = fetch_today_data(date)
 
 # 4. 筋トレ種目の入力フォーム
 exercises = [
-    "マルチヒップ", "レッグプレス", "ラットプルダウン", "ロータリートーソ", 
+    "マルチヒップ", "レッグプレス", "ラットプルダウン", "ロータリートーソ", "ベンチプレス","アブドミナルクランチ",
     "スクワット", "デッドリフト", "スタンディングダンベルカール", "オーバーヘッドダンベルトライセプスエクステンション"
 ]
 
 data = []
 
-for exercise in exercises:
-    st.write(f"□ {exercise}")
-    selected = st.checkbox(f"{exercise} を追加", key=exercise)
+# ボタン形式のみで筋トレ種目を選択
+selected_exercises = st.multiselect(
+    "筋トレ種目を選択してください", 
+    exercises, 
+    default=[],
+    key="exercise_multiselect"
+)
+
+# 選択した種目ごとに入力フォームを動的に生成
+for exercise in selected_exercises:
+    # 今日のデータに既に存在する場合、デフォルトで入力
+    weight_default = 0.0
+    reps_default = 1
+    sets_default = 1
+    comment_default = ""
     
-    # 今日のデータがあればデフォルトで入力
-    if selected:
-        # 今日のデータに既に存在する場合、デフォルトで表示
-        weight_default = 0.0
-        reps_default = 1
-        sets_default = 1
-        comment_default = ""
-        
-        if not today_data.empty and exercise in today_data['種目'].values:
-            exercise_data = today_data[today_data['種目'] == exercise].iloc[0]
-            weight_default = exercise_data['重量']
-            reps_default = exercise_data['回数']
-            sets_default = exercise_data['セット数']
-            comment_default = exercise_data['コメント']
-        
-        weight = st.number_input(f"{exercise}の重量 (kg)", min_value=0.0, value=weight_default, step=0.5)
-        reps = st.number_input(f"{exercise}の回数", min_value=1, value=reps_default)
-        sets = st.number_input(f"{exercise}のセット数", min_value=1, value=sets_default)
-        comment = st.text_area(f"{exercise}のコメント", value=comment_default)
-        
-        data.append((exercise, weight, reps, sets, comment))
+    if not today_data.empty and exercise in today_data['種目'].values:
+        exercise_data = today_data[today_data['種目'] == exercise].iloc[0]
+        weight_default = exercise_data['重量']
+        reps_default = exercise_data['回数']
+        sets_default = exercise_data['セット数']
+        comment_default = exercise_data['コメント']
+    
+    st.subheader(f"🔧 {exercise}")
+    weight = st.number_input(f"{exercise}の重量 (kg)", min_value=0.0, value=weight_default, step=0.5, key=f"{exercise}_weight")
+    reps = st.number_input(f"{exercise}の回数", min_value=1, value=reps_default, key=f"{exercise}_reps")
+    sets = st.number_input(f"{exercise}のセット数", min_value=1, value=sets_default, key=f"{exercise}_sets")
+    comment = st.text_area(f"{exercise}のコメント", value=comment_default, key=f"{exercise}_comment")
+    
+    data.append((exercise, weight, reps, sets, comment))
 
 # フォームの送信ボタン
 if st.button("筋トレ内容を追加"):

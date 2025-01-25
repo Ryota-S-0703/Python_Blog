@@ -16,68 +16,104 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# データベースからデータを取得する関数
-def get_data_from_db():
+# データベースからトレーニングデータを取得する関数
+def get_training_data():
     conn = sqlite3.connect("training_data.db")
     query = "SELECT * FROM training"
     df = pd.read_sql_query(query, conn)
     conn.close()
     return df
 
-# データ取得
-df = get_data_from_db()
-df['date'] = pd.to_datetime(df['date'])  # 日付をdatetime型に変換
+# データベースから筋トレデータを取得する関数
+def get_muscle_data():
+    conn = sqlite3.connect("muscle_data.db")
+    query = "SELECT 日付, 種目, 重量, 回数, セット数, コメント FROM muscle_training"
+    df = pd.read_sql_query(query, conn)
+    conn.close()
+    return df
 
-# 新しい順にソート
-df = df.sort_values(by='date', ascending=False)  # 新しい順に並べ替え
+# トレーニングデータと筋トレデータを取得
+training_df = get_training_data()
+muscle_df = get_muscle_data()
 
-# カレンダー表示で日付を選択
-selected_date = st.date_input("日付を選択", df['date'].max())  # 最新日付を初期値に
+# 日付列をdatetime型に変換
+training_df['date'] = pd.to_datetime(training_df['date'])
+muscle_df['日付'] = pd.to_datetime(muscle_df['日付'])
 
-# 日付の表示形式を変更
-formatted_date = selected_date.strftime('%Y-%m-%d')  # 「2025-01-19」の形式で表示
+# トレーニングデータを新しい順にソート
+training_df = training_df.sort_values(by='date', ascending=False)
 
-# 選択した日付に対応するデータを取得
-filtered_df = df[df['date'] == pd.to_datetime(selected_date)]
+# カレンダーで日付を選択
+selected_date = st.date_input("日付を選択", training_df['date'].max())  # 最新日付を初期値に
+formatted_date = selected_date.strftime('%Y-%m-%d')
 
-# 日付をフォーマット
-filtered_df['date'] = filtered_df['date'].dt.strftime('%Y-%m-%d')
+# 選択された日付に対応するデータをフィルタリング
+filtered_training = training_df[training_df['date'] == pd.to_datetime(selected_date)]
+filtered_muscle = muscle_df[muscle_df['日付'] == pd.to_datetime(selected_date)]
 
-# トレーニング内容とコメントの表示
-if not filtered_df.empty:
-    # トレーニング内容（コメントなし）
+# トレーニング内容の表示
+if not filtered_training.empty:
     st.subheader(f"{formatted_date}")
-    st.write("**トレーニング内容**")
     
-    # コメントはテーブルに含まない
-    training_data = filtered_df.drop(columns=['date', 'comment'])
+    # トレーニング内容の表
+    st.write("**トレーニング内容**")
+    training_data = filtered_training.drop(columns=['date', 'comment'])
     st.table(training_data)
     
-    # コメントの表示
+    # トレーニングコメントの表示
     st.subheader("コメント")
-    st.write(f"**{filtered_df['comment'].iloc[0]}**")
+    st.write(f"**{filtered_training['comment'].iloc[0]}**")
+    
+    # 筋トレ内容の表示
+    if not filtered_muscle.empty:
+        st.write("**その日にやった筋トレ内容**")
+        muscle_data = filtered_muscle.drop(columns=['日付', 'コメント'])
+        st.table(muscle_data)
+        
+        # 筋トレごとのコメント
+        st.subheader("筋トレメニュータイトル")
+        for _, row in filtered_muscle.iterrows():
+            if pd.notna(row['コメント']):
+                st.write(f"**{row['種目']}**")
+                st.write(row['コメント'])
 else:
     st.write("選択した日付のデータはありません。")
 
 # セクション分けライン
-st.markdown('<hr style="border-top: 3px solid #FF6347;">', unsafe_allow_html=True)  # 色を指定
+st.markdown('<hr style="border-top: 3px solid #FF6347;">', unsafe_allow_html=True)
 
-# すべてのデータを新しい順に表示
+# すべてのデータを新しい順で一覧表示
 st.subheader("すべてのトレーニング内容とコメント")
 
-# 新しい順で日付ごとに表示
-for date in df['date'].dt.strftime('%Y-%m-%d').unique():
-    # その日のデータを取得
-    day_data = df[df['date'].dt.strftime('%Y-%m-%d') == date]
+# 過去データの一覧表示
+for date in training_df['date'].dt.strftime('%Y-%m-%d').unique():
+    # トレーニングデータをフィルタリング
+    day_training = training_df[training_df['date'].dt.strftime('%Y-%m-%d') == date]
+    day_muscle = muscle_df[muscle_df['日付'].dt.strftime('%Y-%m-%d') == date]
     
-    # トレーニング内容（コメントなし）
     st.subheader(f"{date}")
-    training_data = day_data.drop(columns=['date', 'comment'])
+    
+    # トレーニング内容の表
+    st.write("**トレーニング内容**")
+    training_data = day_training.drop(columns=['date', 'comment'])
     st.table(training_data)
     
-    # コメントの表示
+    # トレーニングコメントの表示
     st.subheader("コメント")
-    st.write(f"**{day_data['comment'].iloc[0]}**")
+    st.write(f"**{day_training['comment'].iloc[0]}**")
+    
+    # 筋トレ内容の表示
+    if not day_muscle.empty:
+        st.write("**その日にやった筋トレ内容**")
+        muscle_data = day_muscle.drop(columns=['日付', 'コメント'])
+        st.table(muscle_data)
+        
+        # 筋トレごとのコメント
+        st.subheader("筋トレメニュータイトル")
+        for _, row in day_muscle.iterrows():
+            if pd.notna(row['コメント']):
+                st.write(f"**{row['種目']}**")
+                st.write(row['コメント'])
     
     # セクション分けライン
     st.markdown("---")
