@@ -25,59 +25,13 @@ def prepare_table_data(df):
 
     # ピボットテーブル作成
     pivot_table = df.pivot_table(
-        index='日付',
-        columns='種目',
+        index='種目',
+        columns='日付',
         values='セル内容',
-        aggfunc=lambda x: ' / '.join(x)  # 同じ種目が1日に複数回ある場合、区切る
+        aggfunc=lambda x: ' / '.join(x)  # 同じ日付に同じ種目が複数回ある場合、区切る
     )
 
     return pivot_table.fillna('')  # NaNを空文字列に変換
-
-# 縦書きHTMLテーブル作成関数
-def generate_vertical_html_table(table_data):
-    html = """
-    <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: center;
-            vertical-align: bottom; /* 下揃え */
-        }
-        th {
-            writing-mode: vertical-rl;
-        }
-        td {
-            background-color: lightgreen;
-        }
-        td:empty {
-            background-color: white;
-        }
-        td:first-child {
-            background-color: white; /* 日付セルを緑にしない */
-        }
-    </style>
-    <table>
-        <thead>
-            <tr>
-                <th>日付</th>
-    """
-    # ヘッダー部分
-    for col in table_data.columns:
-        html += f"<th>{col}</th>"
-    html += "</tr></thead><tbody>"
-
-    # データ部分（新しい日付順）
-    for idx, row in table_data.iterrows():
-        html += f"<tr><td>{idx}</td>"
-        for cell in row:
-            html += f"<td>{cell}</td>" if cell else "<td></td>"
-        html += "</tr>"
-    html += "</tbody></table>"
-    return html
 
 # StreamlitのUI
 st.title("筋トレデータの管理")
@@ -91,11 +45,19 @@ else:
     # 表データ準備
     table_data = prepare_table_data(df)
 
-    # HTMLテーブル生成
-    html_table = generate_vertical_html_table(table_data)
+    # 日付列を左から最新順に並び替え
+    table_data = table_data[sorted(table_data.columns, reverse=True)]
 
-    # 表を表示
-    st.markdown(html_table, unsafe_allow_html=True)
+    # 表の表示
+    st.subheader("筋トレ履歴表")
+
+    # データフレームのスタイリング
+    def highlight_cells(val):
+        """セルが空でなければ緑色で背景を塗る"""
+        return 'background-color: lightgreen;' if val else ''
+
+    styled_table = table_data.style.applymap(highlight_cells)
+    st.dataframe(styled_table, use_container_width=True)
 
 # 他のセクションやフォームはそのまま維持
 st.subheader("過去の筋トレ履歴")
