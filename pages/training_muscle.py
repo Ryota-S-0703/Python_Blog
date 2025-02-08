@@ -194,18 +194,10 @@ for exercise in selected_exercises:
 
 # フォームの送信ボタン
 if st.button("筋トレ内容を追加"):
-    conn = sqlite3.connect(db_file_path)
-    cursor = conn.cursor()
     for exercise, weight, reps, sets, comment in data:
-        converted_value = weight * reps * sets
-        cursor.execute(f"""
-            INSERT INTO {table_name} (日付, 種目, 重量, 回数, セット数, コメント, 換算値)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (pd.to_datetime('today').strftime('%Y-%m-%d'), exercise, weight, reps, sets, comment, converted_value))
-    conn.commit()
-    conn.close()
-    st.success("筋トレ内容が追加されました！")
-
+        upsert_data(date.strftime('%Y-%m-%d'), exercise, weight, reps, sets, comment)
+    
+    st.success("筋トレ内容が追加または更新されました！")
 
     # 最新データを再表示
     df = fetch_data()
