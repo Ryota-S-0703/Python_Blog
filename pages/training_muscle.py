@@ -85,6 +85,7 @@ def fetch_last_3_comments(exercise):
     return df
 
 # データベースに筋トレデータを追加または更新する関数
+# データベースに筋トレデータを追加または更新する関数
 def upsert_data(date, exercise, weight, reps, sets, comment):
     conn = sqlite3.connect(db_file_path)
     cursor = conn.cursor()
@@ -115,6 +116,7 @@ def upsert_data(date, exercise, weight, reps, sets, comment):
     
     conn.commit()
     conn.close()
+
 
 # StreamlitのUI
 st.title("筋トレデータの管理")
